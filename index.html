@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Price Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface-2: #1a1a2e;
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.12);
+            --text: #e8e8f0;
+            --text-muted: #8888a0;
+            --border: rgba(255, 255, 255, 0.06);
+            --radius: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f url('/static/bg.png') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 640px;
+            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+            padding: 2.5rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .card {
+            background: rgba(18, 18, 26, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(26, 26, 46, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .toggle-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(26, 26, 46, 0.4);
+            padding: 0.6rem 0.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .toggle:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .toggle input {
+            display: none;
+        }
+
+        .toggle .dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .toggle input:checked+.dot {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--accent), #059669);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 30px var(--accent-glow);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius);
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .price {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .price-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .error {
+            color: #ff4d6a;
+            text-align: center;
+            padding: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🏠 House Price Predictor</h1>
+        <p class="subtitle">ML-powered property valuation (Vercel Frontend Demo)</p>
+
+        <form id="predict-form">
+            <div class="card">
+                <div class="grid">
+                    <div class="field">
+                        <label>Area (sq ft)</label>
+                        <input type="number" id="area" value="3000" min="100" required>
+                    </div>
+                    <div class="field">
+                        <label>Bedrooms</label>
+                        <input type="number" id="bedrooms" value="3" min="0" max="10" required>
+                    </div>
+                    <div class="field">
+                        <label>Bathrooms</label>
+                        <input type="number" id="bathrooms" value="2" min="0" required>
+                    </div>
+                    <div class="field">
+                        <label>Stories</label>
+                        <input type="number" id="stories" value="2" min="1" required>
+                    </div>
+                    <div class="field">
+                        <label>Parking Spots</label>
+                        <input type="number" id="parking" value="1" min="0" required>
+                    </div>
+                    <div class="field">
+                        <label>Furnishing</label>
+                        <select id="furnishingstatus">
+                            <option value="unfurnished">Unfurnished</option>
+                            <option value="semi-furnished" selected>Semi-Furnished</option>
+                            <option value="furnished">Furnished</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="toggle-row">
+                    <label class="toggle"><input type="checkbox" id="mainroad" checked><span class="dot"></span>Main
+                        Road</label>
+                    <label class="toggle"><input type="checkbox" id="guestroom"><span class="dot"></span>Guest
+                        Room</label>
+                    <label class="toggle"><input type="checkbox" id="basement"><span class="dot"></span>Basement</label>
+                    <label class="toggle"><input type="checkbox" id="hotwaterheating"><span class="dot"></span>Hot
+                        Water</label>
+                    <label class="toggle"><input type="checkbox" id="airconditioning" checked><span
+                            class="dot"></span>AC</label>
+                    <label class="toggle"><input type="checkbox" id="prefarea"><span class="dot"></span>Preferred
+                        Area</label>
+                </div>
+            </div>
+            <button type="submit">💰 Predict Price</button>
+        </form>
+
+        <div class="result" id="result" style="margin-top:1.5rem;">
+            <div class="price" id="price-value">—</div>
+            <div class="price-label">Predicted Property Price</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('predict-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '🔄 Predicting...';
+
+            // Mock backend response for static frontend deployment
+            setTimeout(() => {
+                const area = +document.getElementById('area').value;
+                const bedrooms = +document.getElementById('bedrooms').value;
+                const bathrooms = +document.getElementById('bathrooms').value;
+
+                // Simple heuristic logic for the mock prediction to seem somewhat realistic
+                let basePrice = 200000 + (area * 80) + (bedrooms * 25000) + (bathrooms * 30000);
+                if (document.getElementById('airconditioning').checked) basePrice += 40000;
+                if (document.getElementById('prefarea').checked) basePrice += 100000;
+
+                document.getElementById('price-value').textContent = '$' + Math.round(basePrice).toLocaleString();
+                document.getElementById('result').classList.add('show');
+
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }, 800);
+        });
+    </script>
+</body>
+
+</html>
