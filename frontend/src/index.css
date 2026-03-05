@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+    --color-brand-500: #10b981;
+    --color-brand-600: #059669;
+    --color-surface: #12121a;
+    --color-surface-2: #1a1a2e;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0f url('/bg.png') no-repeat center center fixed;
+    background-size: cover;
+}
+
+@layer utilities {
+    .glass-card {
+        @apply bg-surface/60 backdrop-blur-md border border-white/10 rounded-2xl shadow-xl;
+    }
+}
