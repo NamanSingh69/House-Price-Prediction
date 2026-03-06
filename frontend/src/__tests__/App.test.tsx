@@ -2,8 +2,9 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from '../App';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock the global fetch to simulate network states
-global.fetch = vi.fn();
+// Use Vitest global stubbing instead of global.fetch assignments to satisfy TS
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
 
 describe('House Price Predictor State Machine', () => {
     beforeEach(() => {
@@ -23,13 +24,13 @@ describe('House Price Predictor State Machine', () => {
         localStorage.setItem('gemini_api_key', 'test_key_123');
 
         // Mock the ML API call (fetch #1)
-        (global.fetch as any).mockResolvedValueOnce({
+        mockFetch.mockResolvedValueOnce({
             ok: true,
             json: async () => ({ predicted_price: 450000 })
         });
 
         // Mock the Gemini Agent call (fetch #2)
-        (global.fetch as any).mockResolvedValueOnce({
+        mockFetch.mockResolvedValueOnce({
             ok: true,
             json: async () => ({
                 candidates: [{ content: { parts: [{ text: 'Market analysis complete.' }] } }]
@@ -63,7 +64,7 @@ describe('House Price Predictor State Machine', () => {
         localStorage.setItem('gemini_api_key', 'test_key_123');
 
         // Mock API failure
-        (global.fetch as any).mockRejectedValueOnce(new Error('Network connection dropped'));
+        mockFetch.mockRejectedValueOnce(new Error('Network connection dropped'));
 
         render(<App />);
 

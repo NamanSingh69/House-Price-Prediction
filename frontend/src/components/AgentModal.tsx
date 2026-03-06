@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Sparkles, AlertCircle, CheckCircle2, TrendingUp, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ModalProps {
@@ -8,7 +8,7 @@ interface ModalProps {
     onSave: (key: string, model: string) => void;
 }
 
-export function AgentModal({ isOpen, onClose, onSave }: ModalProps) {
+export function AgentModal({ isOpen, onSave }: ModalProps) {
     const [apiKey, setApiKey] = useState('');
     const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
 

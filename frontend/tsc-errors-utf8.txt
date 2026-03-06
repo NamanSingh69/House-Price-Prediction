@@ -1,0 +1,15 @@
+﻿src/__tests__/App.test.tsx(6,1): error TS2304: Cannot find name 'global'.
+src/__tests__/App.test.tsx(26,10): error TS2304: Cannot find name 'global'.
+src/__tests__/App.test.tsx(32,10): error TS2304: Cannot find name 'global'.
+src/__tests__/App.test.tsx(66,10): error TS2304: Cannot find name 'global'.
+src/App.tsx(2,53): error TS6133: 'CheckCircle2' is declared but its value is never read.
+src/App.tsx(19,21): error TS6133: 'setStories' is declared but its value is never read.
+src/App.tsx(20,21): error TS6133: 'setParking' is declared but its value is never read.
+src/App.tsx(21,24): error TS6133: 'setFurnishing' is declared but its value is never read.
+src/components/AgentModal.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/AgentModal.tsx(2,10): error TS6133: 'Settings' is declared but its value is never read.
+src/components/AgentModal.tsx(2,30): error TS6133: 'AlertCircle' is declared but its value is never read.
+src/components/AgentModal.tsx(2,43): error TS6133: 'CheckCircle2' is declared but its value is never read.
+src/components/AgentModal.tsx(2,57): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/components/AgentModal.tsx(2,69): error TS6133: 'Search' is declared but its value is never read.
+src/components/AgentModal.tsx(11,38): error TS6133: 'onClose' is declared but its value is never read.

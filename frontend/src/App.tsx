@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Sparkles, TrendingUp, AlertTriangle, CheckCircle2, Settings } from 'lucide-react';
+import { Home, Sparkles, TrendingUp, AlertTriangle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { AgentModal } from './components/AgentModal';
 
@@ -16,9 +16,9 @@ export default function App() {
     const [area, setArea] = useState(3000);
     const [bedrooms, setBedrooms] = useState(3);
     const [bathrooms, setBathrooms] = useState(2);
-    const [stories, setStories] = useState(2);
-    const [parking, setParking] = useState(1);
-    const [furnishing, setFurnishing] = useState('semi-furnished');
+    const [stories] = useState(2);
+    const [parking] = useState(1);
+    const [furnishing] = useState('semi-furnished');
 
     // Toggles
     const [toggles, setToggles] = useState({
