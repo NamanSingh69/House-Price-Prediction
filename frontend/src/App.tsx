@@ -8,7 +8,7 @@ type AppState = 'idle' | 'loading' | 'success' | 'error';
 export default function App() {
     const [appState, setAppState] = useState<AppState>('idle');
     const [errorMessage, setErrorMessage] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false); // Default to false so it does not block the UI on load
     const [apiKey, setApiKey] = useState('');
     const [model, setModel] = useState('gemini-1.5-flash');
 

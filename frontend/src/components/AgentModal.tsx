@@ -7,7 +7,7 @@ interface ModalProps {
     onSave: (key: string, model: string) => void;
 }
 
-export function AgentModal({ isOpen, onSave }: ModalProps) {
+export function AgentModal({ isOpen, onClose, onSave }: ModalProps) {
     const [apiKey, setApiKey] = useState('');
     const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
 
@@ -23,11 +23,16 @@ export function AgentModal({ isOpen, onSave }: ModalProps) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
             <div className="w-full max-w-md bg-surface-2 border border-white/10 rounded-2xl p-6 shadow-2xl relative">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-brand-500/10 text-brand-500 rounded-lg">
-                        <Sparkles size={24} />
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-brand-500/10 text-brand-500 rounded-lg">
+                            <Sparkles size={24} />
+                        </div>
+                        <h2 className="text-xl font-bold text-white">Agent Settings</h2>
                     </div>
-                    <h2 className="text-xl font-bold text-white">Agent Settings</h2>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
+                        ✕
+                    </button>
                 </div>
 
                 <p className="text-sm text-slate-400 mb-6">
@@ -72,6 +77,12 @@ export function AgentModal({ isOpen, onSave }: ModalProps) {
                 </div>
 
                 <div className="flex gap-3 mt-8">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 bg-white/5 hover:bg-white/10 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
+                    >
+                        Close
+                    </button>
                     <button
                         onClick={() => {
                             onSave(apiKey, selectedModel);
