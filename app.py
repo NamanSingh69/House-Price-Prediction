@@ -100,6 +100,63 @@ def predict():
         logger.error(f"Prediction error: {e}")
         return jsonify({'error': str(e)}), 500
 
+import urllib.request
+import json
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze_market():
+    data = request.get_json() or {}
+    api_key = request.headers.get("X-Gemini-Key")
+    
+    if not api_key or not api_key.strip() or api_key == "null":
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("VITE_GEMINI_API_KEY")
+        
+    if not api_key:
+        return jsonify({"error": "Gemini API key missing"}), 401
+        
+    model = data.get("model", "gemini-3.1-pro-preview")
+    prompt = data.get("prompt", "")
+    
+    # HTTP-level dynamic cascade targeting best available tiers
+    cascade = [model] if model not in ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-2.5-pro", "gemini-2.5-flash"] else []
+    cascade += ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite-preview", "gemini-2.5-pro", "gemini-2.5-flash"]
+    
+    # Remove duplicates preserving order
+    cascade = list(dict.fromkeys(cascade))
+
+    last_err = None
+    last_code = 500
+    
+    for fallback_model in cascade:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{fallback_model}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}]
+        }
+        
+        # Inject Google Search tools natively on 2.5 iterations
+        if "2.5" in fallback_model:
+            payload["tools"] = [{"google_search": {}}]
+            
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        try:
+            with urllib.request.urlopen(req) as response:
+                result = json.loads(response.read().decode())
+                result['_model_used'] = fallback_model
+                return jsonify(result), 200
+        except urllib.error.HTTPError as e:
+            err_msg = e.read().decode()
+            last_err = err_msg
+            last_code = e.code
+            if e.code == 429 or e.code == 503 or "exhausted" in err_msg.lower():
+                continue # Trigger fallback
+            else:
+                break # Non-recoverable (e.g., 400 Bad Request)
+        except Exception as e:
+            last_err = str(e)
+            break
+            
+    return jsonify({"error": last_err}), last_code
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
