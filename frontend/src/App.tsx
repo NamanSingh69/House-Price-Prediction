@@ -39,9 +39,9 @@ export default function App() {
         const savedModel = localStorage.getItem('gemini_model');
         if (savedKey) {
             setApiKey(savedKey);
-            setModel(savedModel || 'gemini-1.5-flash');
-        } else {
-            setIsModalOpen(true);
+        }
+        if (savedModel) {
+            setModel(savedModel);
         }
     }, []);
 
@@ -60,10 +60,6 @@ export default function App() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!apiKey) {
-            setIsModalOpen(true);
-            return;
-        }
 
         setAppState('loading');
         setErrorMessage('');
@@ -84,21 +80,21 @@ export default function App() {
             const price = mlData.predicted_price;
             setPredictedPrice(price);
 
-            // 2. Cross-Project LLM Wrapper Call (Client-Side)
+            // 2. Cross-Project LLM Wrapper Call (Proxy to Server)
             const prompt = `You are an expert real estate market analyst. A user is looking at a property with ${area} sq ft, ${bedrooms} beds, ${bathrooms} baths. Has AC: ${toggles.airconditioning}. The algorithmic pricing model predicted $${price.toLocaleString()}.
       Task: Search for the most recent housing market trends. Provide a short qualitative analysis if this predicted price aligns with current macro trends. Output simple text without markdown blocks.`;
 
-            const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            const aiResponse = await fetch('/api/analyze', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    tools: [{ google_search: {} }]
-                })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Gemini-Key': apiKey || ""
+                },
+                body: JSON.stringify({ prompt, model })
             });
 
             const aiData = await aiResponse.json();
-            if (aiData.error) throw new Error(aiData.error.message);
+            if (!aiResponse.ok) throw new Error(aiData.error || 'Agent Analysis Failed');
 
             const analysisText = aiData.candidates[0]?.content?.parts[0]?.text || 'Market analysis complete.';
             setAgentAnalysis(analysisText);

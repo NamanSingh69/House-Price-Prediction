@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface ModalProps {
     isOpen: boolean;
@@ -44,9 +43,13 @@ export function AgentModal({ isOpen, onSave }: ModalProps) {
                             type="password"
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="AIzaSy..."
-                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                            placeholder="Using public fallback key — paste your own for higher limits"
+                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all font-mono"
                         />
+                        <div className="text-[10px] text-slate-400 mt-2 leading-snug px-1">
+                            ✅ A free public API key is active by default. Add your own for higher rate limits.<br />
+                            <strong className="text-slate-300">Free Tier Limits:</strong> 15 Requests/Min, 1,000,000 Tokens/Min, 1,500 Requests/Day.
+                        </div>
                     </div>
 
                     <div>
@@ -71,11 +74,7 @@ export function AgentModal({ isOpen, onSave }: ModalProps) {
                 <div className="flex gap-3 mt-8">
                     <button
                         onClick={() => {
-                            if (apiKey.trim().length > 10) {
-                                onSave(apiKey, selectedModel);
-                            } else {
-                                toast.error("Please enter a valid API Key");
-                            }
+                            onSave(apiKey, selectedModel);
                         }}
                         className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
                     >
