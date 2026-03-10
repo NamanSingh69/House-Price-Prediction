@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Home, Sparkles, TrendingUp, AlertTriangle, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { AgentModal } from './components/AgentModal';
+import { Skeleton } from './components/Skeleton';
+import { EmptyState } from './components/EmptyState';
 
 type AppState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -10,7 +12,45 @@ export default function App() {
     const [errorMessage, setErrorMessage] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false); // Default to false so it does not block the UI on load
     const [apiKey, setApiKey] = useState('');
-    const [model, setModel] = useState('gemini-1.5-flash');
+    const [model, setModel] = useState('gemini-3.1-pro-preview');
+    const [mode, setMode] = useState<'pro' | 'fast'>('pro');
+    const [quota, setQuota] = useState({ remaining: 50, limit: 50 });
+
+    const DAILY_LIMITS: Record<string, Record<string, number>> = {
+        "pro": { "3.1": 50, "2.5": 25 },
+        "flash": { "3.1": 500, "2.5": 250 },
+        "flash-lite": { "3.1": 1000, "2.5": 500 }
+    };
+
+    const updateQuota = (currentMode: 'pro' | 'fast') => {
+        const stored = localStorage.getItem("houseprice_rate_limits");
+        const today = new Date().toISOString().slice(0, 10);
+        let limits = { date: today, used: {} as Record<string, number> };
+        if (stored) {
+            const p = JSON.parse(stored);
+            if (p.date === today) limits = p;
+        } else {
+            localStorage.setItem("houseprice_rate_limits", JSON.stringify(limits));
+        }
+        const tier = currentMode === "pro" ? "pro" : "flash-lite";
+        const limit = DAILY_LIMITS[tier]?.["3.1"] || 50;
+        const used = limits.used[tier] || 0;
+        setQuota({ remaining: Math.max(0, limit - used), limit });
+    };
+
+    const trackUsage = (modelName: string) => {
+        const tier = modelName.includes("pro") ? "pro" : modelName.includes("flash-lite") ? "flash-lite" : "flash";
+        const stored = localStorage.getItem("houseprice_rate_limits");
+        const today = new Date().toISOString().slice(0, 10);
+        let limits = { date: today, used: {} as Record<string, number> };
+        if (stored) {
+            const p = JSON.parse(stored);
+            if (p.date === today) limits = p;
+        }
+        limits.used[tier] = (limits.used[tier] || 0) + 1;
+        localStorage.setItem("houseprice_rate_limits", JSON.stringify(limits));
+        updateQuota(mode);
+    };
 
     // Form State
     const [area, setArea] = useState(3000);
@@ -37,21 +77,31 @@ export default function App() {
     useEffect(() => {
         const savedKey = localStorage.getItem('gemini_api_key');
         const savedModel = localStorage.getItem('gemini_model');
+        const savedMode = localStorage.getItem('gemini_mode') as 'pro' | 'fast';
         if (savedKey) {
             setApiKey(savedKey);
         }
         if (savedModel) {
             setModel(savedModel);
         }
+        if (savedMode) {
+            setMode(savedMode);
+        } else {
+            setMode('pro');
+        }
+        updateQuota(savedMode || 'pro');
     }, []);
 
-    const handleSaveConfig = (key: string, selectedModel: string) => {
+    const handleSaveConfig = (key: string, selectedModel: string, selectedMode: 'pro' | 'fast') => {
         localStorage.setItem('gemini_api_key', key);
         localStorage.setItem('gemini_model', selectedModel);
+        localStorage.setItem('gemini_mode', selectedMode);
         setApiKey(key);
         setModel(selectedModel);
+        setMode(selectedMode);
+        updateQuota(selectedMode);
         setIsModalOpen(false);
-        toast.success(`Agent configuration saved (${selectedModel})`);
+        toast.success(`Agent configuration saved (${selectedMode.toUpperCase()} Mode)`);
     };
 
     const handleToggle = (key: keyof typeof toggles) => {
@@ -94,7 +144,14 @@ export default function App() {
             });
 
             const aiData = await aiResponse.json();
-            if (!aiResponse.ok) throw new Error(aiData.error || 'Agent Analysis Failed');
+            if (!aiResponse.ok) {
+                if (aiResponse.status === 429) {
+                    throw new Error("⏳ Rate limit reached — try again in ~1 minute, or switch to Fast mode.");
+                }
+                throw new Error(aiData.error || 'Agent Analysis Failed');
+            }
+
+            trackUsage(aiData._model_used || model);
 
             const analysisText = aiData.candidates[0]?.content?.parts[0]?.text || 'Market analysis complete.';
             setAgentAnalysis(analysisText);
@@ -110,7 +167,7 @@ export default function App() {
 
     return (
         <>
-            <AgentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveConfig} />
+            <AgentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveConfig} initialMode={mode} initialModel={model} quotaRemaining={quota.remaining} quotaLimit={quota.limit} />
 
             <div className="flex items-center justify-center p-6 lg:p-12 w-full max-w-4xl mx-auto">
                 <div className="w-full glass-card p-10">
@@ -122,13 +179,29 @@ export default function App() {
                             </h1>
                             <p className="text-slate-400 mt-2">ML Valuation + Live Web Search Market Agent</p>
                         </div>
-                        <button
-                            onClick={() => setIsModalOpen(true)}
-                            className="p-3 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors"
-                            title="Agent Settings"
-                        >
-                            <Settings size={20} className="text-brand-500" />
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    const newMode = mode === 'pro' ? 'fast' : 'pro';
+                                    const newModel = newMode === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-3.1-flash-lite-preview';
+                                    handleSaveConfig(apiKey, newModel, newMode);
+                                }}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${mode === 'pro'
+                                    ? 'bg-gradient-to-br from-purple-600 to-indigo-600 shadow-lg shadow-purple-500/20 text-white'
+                                    : 'bg-gradient-to-br from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/20 text-white'
+                                    }`}
+                            >
+                                {mode === 'pro' ? '⚡ PRO' : '🚀 FAST'}
+                            </button>
+                            <button
+                                onClick={() => setIsModalOpen(true)}
+                                className="p-3 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors relative"
+                                title="Agent Settings"
+                            >
+                                <Settings size={20} className="text-brand-500" />
+                                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0B0F19] ${quota.remaining / quota.limit > 0.5 ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                            </button>
+                        </div>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -177,6 +250,14 @@ export default function App() {
                             )}
                         </button>
                     </form>
+
+                    {appState === 'idle' && !predictedPrice && (
+                        <EmptyState />
+                    )}
+
+                    {appState === 'loading' && (
+                        <Skeleton />
+                    )}
 
                     {appState === 'error' && (
                         <div className="mt-8 bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex items-start gap-4">
