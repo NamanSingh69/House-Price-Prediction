@@ -12,29 +12,35 @@ describe('House Price Predictor State Machine', () => {
         localStorage.clear();
     });
 
-    it('renders idle state correctly and prompts for API key if missing', () => {
+    it('renders idle state correctly with empty state message', () => {
         render(<App />);
         expect(screen.getByText(/House Price Predictor/i)).toBeInTheDocument();
 
-        // Modal should be visible since localStorage has no gemini_api_key
-        expect(screen.getByText(/Agent Settings/i)).toBeInTheDocument();
+        // Modal starts closed (isModalOpen=false), empty state should show
+        expect(screen.getByText(/Ready for Valuation/i)).toBeInTheDocument();
     });
 
     it('transitions to loading state upon submission and then success', async () => {
         localStorage.setItem('gemini_api_key', 'test_key_123');
 
-        // Mock the ML API call (fetch #1)
+        const mlPayload = JSON.stringify({ predicted_price: 450000 });
+        const aiPayload = JSON.stringify({
+            candidates: [{ content: { parts: [{ text: 'Market analysis complete.' }] } }],
+            _model_used: 'gemini-3.1-pro-preview'
+        });
+
+        // Mock the ML API call (fetch #1) — must expose both .text() and .json()
         mockFetch.mockResolvedValueOnce({
             ok: true,
-            json: async () => ({ predicted_price: 450000 })
+            json: async () => JSON.parse(mlPayload),
+            text: async () => mlPayload
         });
 
         // Mock the Gemini Agent call (fetch #2)
         mockFetch.mockResolvedValueOnce({
             ok: true,
-            json: async () => ({
-                candidates: [{ content: { parts: [{ text: 'Market analysis complete.' }] } }]
-            })
+            json: async () => JSON.parse(aiPayload),
+            text: async () => aiPayload
         });
 
         render(<App />);

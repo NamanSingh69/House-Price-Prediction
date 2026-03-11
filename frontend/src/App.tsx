@@ -117,14 +117,21 @@ export default function App() {
         setAgentAnalysis('');
 
         try {
-            // 1. ML Backend Call (Mocking the python backend call for pure frontend testing)
+            // 1. ML Backend Call
             const mlResponse = await fetch('/api/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ area, bedrooms, bathrooms, stories, parking, furnishing, ...toggles })
+                body: JSON.stringify({ area, bedrooms, bathrooms, stories, parking, furnishingstatus: furnishing, ...toggles })
             });
 
-            const mlData = await mlResponse.json();
+            // Safe JSON parse — guard against empty/HTML responses
+            const mlText = await mlResponse.text();
+            let mlData: any;
+            try {
+                mlData = JSON.parse(mlText);
+            } catch {
+                throw new Error(`ML backend returned invalid response: ${mlText.slice(0, 200) || '(empty)'}`);
+            }
             if (!mlResponse.ok) throw new Error(mlData.error || 'ML Inference Failed');
 
             const price = mlData.predicted_price;
@@ -143,7 +150,14 @@ export default function App() {
                 body: JSON.stringify({ prompt, model })
             });
 
-            const aiData = await aiResponse.json();
+            // Safe JSON parse — guard against empty/HTML responses
+            const aiText = await aiResponse.text();
+            let aiData: any;
+            try {
+                aiData = JSON.parse(aiText);
+            } catch {
+                throw new Error(`AI agent returned invalid response: ${aiText.slice(0, 200) || '(empty)'}`);
+            }
             if (!aiResponse.ok) {
                 if (aiResponse.status === 429) {
                     throw new Error("⏳ Rate limit reached — try again in ~1 minute, or switch to Fast mode.");
@@ -160,8 +174,9 @@ export default function App() {
 
         } catch (err: any) {
             setAppState('error');
-            setErrorMessage(err.message || 'Network connection dropped');
-            toast.error('Agent Pipeline Failed');
+            const msg = err.message || 'Network connection dropped';
+            setErrorMessage(msg);
+            toast.error(`Agent Pipeline Failed: ${msg}`);
         }
     };
 
