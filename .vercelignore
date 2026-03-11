@@ -1,7 +1,2 @@
-*.py
-*.pyc
-requirements.txt
-*.csv
-*.joblib
 *.ipynb
 eda_plots/
