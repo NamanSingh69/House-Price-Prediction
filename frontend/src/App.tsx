@@ -118,7 +118,7 @@ export default function App() {
 
         try {
             // 1. ML Backend Call
-            const mlResponse = await fetch('/app.py?action=predict', {
+            const mlResponse = await fetch('/api/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ area, bedrooms, bathrooms, stories, parking, furnishingstatus: furnishing, ...toggles })
@@ -141,7 +141,7 @@ export default function App() {
             const prompt = `You are an expert real estate market analyst. A user is looking at a property with ${area} sq ft, ${bedrooms} beds, ${bathrooms} baths. Has AC: ${toggles.airconditioning}. The algorithmic pricing model predicted $${price.toLocaleString()}.
       Task: Search for the most recent housing market trends. Provide a short qualitative analysis if this predicted price aligns with current macro trends. Output simple text without markdown blocks.`;
 
-            const aiResponse = await fetch('/app.py?action=analyze', {
+            const aiResponse = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

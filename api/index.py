@@ -134,25 +134,31 @@ def do_analyze_market():
             
     return jsonify({"error": last_err}), last_code
 
+@app.route('/api/predict', methods=['POST', 'OPTIONS'])
+def predict():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+    return do_predict()
+
+@app.route('/api/analyze', methods=['POST', 'OPTIONS'])
+def analyze_market():
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+    return do_analyze_market()
+
+# Fallback for Vercel's rewrite quirks just in case
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'OPTIONS'])
 @app.route('/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
 def catch_all(path):
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
         
-    # Either the path explicitly states the action, or we pass it via query args
-    action = request.args.get('action')
-    if not action and request.path.endswith('predict'):
-        action = 'predict'
-    if not action and request.path.endswith('analyze'):
-        action = 'analyze'
-        
-    if action == 'predict':
+    if 'predict' in request.path or 'predict' in path:
         return do_predict()
-    elif action == 'analyze':
+    elif 'analyze' in request.path or 'analyze' in path:
         return do_analyze_market()
         
-    return jsonify({"error": "Invalid action or endpoint", "path": request.path}), 404
+    return jsonify({"error": "Invalid API endpoint", "path": request.path}), 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
