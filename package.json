@@ -2,6 +2,6 @@
     "name": "house-price-prediction",
     "version": "1.0.0",
     "scripts": {
-        "build": "echo 'Pre-compiled frontend/dist'"
+        "build": "cd frontend && npm install && npm run build && cd .. && mkdir -p public && cp -r frontend/dist/* public/"
     }
 }
