@@ -117,10 +117,13 @@ export default function App() {
         setAgentAnalysis('');
 
         try {
-            // 1. ML Backend Call
+            // 1. ML Backend Call (Now AI Fallback)
             const mlResponse = await fetch('/api/predict', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Gemini-Key': apiKey || ""
+                },
                 body: JSON.stringify({ area, bedrooms, bathrooms, stories, parking, furnishingstatus: furnishing, ...toggles })
             });
 
