@@ -1,7 +1,7 @@
 import os
 import logging
-import joblib
-import pandas as pd
+import urllib.request
+import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pydantic import BaseModel, ValidationError
@@ -12,21 +12,6 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 # Enable CORS for the React frontend development
 CORS(app)
-
-# Load pre-trained model at startup
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'best_house_price_model.joblib')
-try:
-    model = joblib.load(MODEL_PATH)
-    logger.info(f"✅ Model loaded from {MODEL_PATH}")
-except Exception as e:
-    logger.error(f"❌ Failed to load model: {e}")
-    model = None
-
-# Feature definitions (from training script)
-NUMERIC_FEATURES = ['area', 'bedrooms', 'bathrooms', 'stories', 'parking']
-BINARY_FEATURES = ['mainroad', 'guestroom', 'basement', 'hotwaterheating', 'airconditioning', 'prefarea']
-CATEGORICAL_FEATURES = ['furnishingstatus']
-ALL_FEATURES = NUMERIC_FEATURES + BINARY_FEATURES + CATEGORICAL_FEATURES
 
 # The Strict Pydantic Zero-Trust Schema
 class PredictionRequest(BaseModel):
@@ -45,12 +30,9 @@ class PredictionRequest(BaseModel):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "ok", "model_status": "loaded" if model else "unloaded"})
+    return jsonify({"status": "ok", "model_status": "ai_fallback_active"})
 
 def do_predict():
-    if model is None:
-        return jsonify({'error': 'Prediction model is not currently available on the server.'}), 503
-
     try:
         data = request.get_json()
         if not data:
@@ -62,31 +44,52 @@ def do_predict():
     except Exception as e:
         return jsonify({'error': 'Malformed request'}), 400
 
-    try:
-        input_dict = {
-            'area': [validated_data.area],
-            'bedrooms': [validated_data.bedrooms],
-            'bathrooms': [validated_data.bathrooms],
-            'stories': [validated_data.stories],
-            'parking': [validated_data.parking],
-            'mainroad': ['yes' if validated_data.mainroad else 'no'],
-            'guestroom': ['yes' if validated_data.guestroom else 'no'],
-            'basement': ['yes' if validated_data.basement else 'no'],
-            'hotwaterheating': ['yes' if validated_data.hotwaterheating else 'no'],
-            'airconditioning': ['yes' if validated_data.airconditioning else 'no'],
-            'prefarea': ['yes' if validated_data.prefarea else 'no'],
-            'furnishingstatus': [validated_data.furnishingstatus]
-        }
-        input_df = pd.DataFrame(input_dict)[ALL_FEATURES]
-        prediction = model.predict(input_df)[0]
-        logger.info(f"Prediction successful: ${prediction:,.2f}")
-        return jsonify({'predicted_price': round(float(prediction), 2)})
-    except Exception as e:
-        logger.error(f"Prediction error: {e}")
-        return jsonify({'error': str(e)}), 500
+    # AI Fallback Inference (bypassing 250MB Lambda limits)
+    prompt = f"""You are a highly precise algorithmic real estate pricer.
+Given these property details:
+Area: {validated_data.area} sqft
+Bedrooms: {validated_data.bedrooms}
+Bathrooms: {validated_data.bathrooms}
+Stories: {validated_data.stories}
+Parking Spaces: {validated_data.parking}
+Main Road: {"yes" if validated_data.mainroad else "no"}
+Guestroom: {"yes" if validated_data.guestroom else "no"}
+Basement: {"yes" if validated_data.basement else "no"}
+Hot Water Heating: {"yes" if validated_data.hotwaterheating else "no"}
+Air Conditioning: {"yes" if validated_data.airconditioning else "no"}
+Preferred Area: {"yes" if validated_data.prefarea else "no"}
+Furnishing: {validated_data.furnishingstatus}
 
-import urllib.request
-import json
+Estimate a realistic price in USD. Output ONLY a raw valid JSON object with a single key 'predicted_price' containing the raw integer number. No markdown, no text. Example: {{"predicted_price": 450000}}"""
+
+    api_key = request.headers.get("X-Gemini-Key") or os.environ.get("GEMINI_API_KEY") or os.environ.get("VITE_GEMINI_API_KEY")
+    if not api_key:
+        return jsonify({"error": "Gemini API key missing"}), 401
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode())
+            text_response = result['candidates'][0]['content']['parts'][0]['text']
+            
+            # Clean up potential markdown formatting
+            text_response = text_response.replace('```json', '').replace('```', '').strip()
+            parsed_json = json.loads(text_response)
+            prediction = parsed_json['predicted_price']
+            
+            logger.info(f"AI Prediction successful: ${prediction:,.2f}")
+            return jsonify({'predicted_price': round(float(prediction), 2)})
+            
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode()
+        logger.error(f"AI Prediction HTTP error: {err_msg}")
+        return jsonify({'error': 'Inference failed via AI fallback'}), 500
+    except Exception as e:
+        logger.error(f"AI Prediction error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 def do_analyze_market():
     data = request.get_json() or {}
